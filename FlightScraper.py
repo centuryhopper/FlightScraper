@@ -114,7 +114,7 @@ def start_kayak(city_from, city_to, date_start, date_end):
     if loading == weird:
         loading = 'N\\A'
 
-    Secrets.sendEmail('', '', Secrets.EmailCredentials(sender=Secrets.senderEmail,
+    Secrets.sendEmail(filePath, fileName, Secrets.EmailCredentials(sender=Secrets.senderEmail,
             password=Secrets.senderEmailPassword,
             recipients=Secrets.receiverEmails),
             subject='Kayak Flight Scraper Results',
@@ -256,6 +256,7 @@ def main():
 
     return start_kayak(city_from, city_to, date_start, date_end)
 
+#region old code
     # for n in range(0,5):
     #     start_kayak(city_from, city_to, date_start, date_end)
     #     print('iteration {} was complete @ {}'.format(n, strftime("%Y%m%d-%H%M")))
@@ -263,6 +264,8 @@ def main():
     #     # Wait 4 hours
     #     sleep(60*60*4)
     #     print('sleep finished.....')
+
+#endregion
 
 
 
