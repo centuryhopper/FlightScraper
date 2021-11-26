@@ -8,18 +8,11 @@ from email.mime.multipart import MIMEMultipart
 from secrets import Secrets
 
 
-
 driver = webdriver.Chrome(executable_path=Secrets.CHROME_DRIVER_PATH)
 sleep(2)
 
 
-# # Closing the popup
-# xp_popup_close = '//button[contains(@id,"dialog-close") and contains(@class,"Button-No-Standard-Style close ")]'
-# driver.find_elements_by_xpath(xp_popup_close)[5].click()
-
-
-
-#region load_more
+# region load_more
 
 def load_more():
     '''Load more results to maximize the scraping'''
@@ -28,22 +21,23 @@ def load_more():
         driver.find_element_by_xpath(more_results).click()
         print('sleeping.....')
         # sleep(randint(25,35))
-        sleep(randint(10,15))
+        sleep(randint(10, 15))
     except:
         pass
 
-#endregion
+# endregion
 
-#region start_kayak
+# region start_kayak
 
 def start_kayak(city_from, city_to, date_start, date_end):
     """City codes - it's the IATA codes!
     Date format -  YYYY-MM-DD"""
 
-    kayakLink = 'https://www.kayak.com/flights/' + city_from + '-' + city_to +'/' + date_start + '-flexible/' + date_end + '-flexible?sort=bestflight_a'
+    kayakLink = 'https://www.kayak.com/flights/' + city_from + '-' + city_to + \
+        '/' + date_start + '-flexible/' + date_end + '-flexible?sort=bestflight_a'
     print(kayakLink)
     driver.get(kayakLink)
-    sleep(randint(8,10))
+    sleep(randint(8, 10))
     # sometimes a popup shows up, so we can use a try statement to check it and close
     try:
         xp_popup_close = '//button[contains(@id,"dialog-close") and contains(@class,"Button-No-Standard-Style close ")]'
@@ -51,29 +45,31 @@ def start_kayak(city_from, city_to, date_start, date_end):
     except Exception as e:
         pass
     # sleep(randint(60,95))
-    sleep(randint(5,10))
+    sleep(randint(5, 10))
     print('loading more.....')
     load_more()
     print('starting first scrape.....')
     df_flights_best = page_scrape()
     df_flights_best['sort'] = 'best'
     # sleep(randint(60,80))
-    sleep(randint(5,10))
+    sleep(randint(5, 10))
 
     # Let's also get the lowest prices from the matrix on top
-    matrix = driver.find_elements_by_xpath('//*[contains(@id,"FlexMatrixCell")]')
-    sleep(randint(5,10))
-    matrix_prices = [int(price.text.replace('$','')) for price in matrix if price.text]
+    matrix = driver.find_elements_by_xpath(
+        '//*[contains(@id,"FlexMatrixCell")]')
+    sleep(randint(5, 10))
+    matrix_prices = [int(price.text.replace('$', ''))
+                     for price in matrix if price.text]
     matrix_min = min(matrix_prices)
     matrix_avg = sum(matrix_prices)/len(matrix_prices)
 
     print('switching to cheapest results.....')
-    sleep(randint(3,5))
+    sleep(randint(3, 5))
     cheap_results = '//a[@data-code = "price"]'
     cheap_results_button = driver.find_element_by_xpath(cheap_results)
     driver.execute_script("arguments[0].click();", cheap_results_button)
     # driver.find_element_by_xpath(cheap_results).click()
-    sleep(randint(60,90))
+    sleep(randint(60, 90))
     print('loading more.....')
 
     load_more()
@@ -82,13 +78,13 @@ def start_kayak(city_from, city_to, date_start, date_end):
     df_flights_cheap = page_scrape()
     df_flights_cheap['sort'] = 'cheap'
     # sleep(randint(60,80))
-    sleep(randint(5,10))
+    sleep(randint(5, 10))
 
     print('switching to quickest results.....')
     quick_results = '//a[@data-code = "duration"]'
     quick_results_button = driver.find_element_by_xpath(quick_results)
     driver.execute_script("arguments[0].click();", quick_results_button)
-    sleep(randint(60,90))
+    sleep(randint(60, 90))
     print('loading more.....')
 
     load_more()
@@ -97,46 +93,41 @@ def start_kayak(city_from, city_to, date_start, date_end):
     df_flights_fast = page_scrape()
     df_flights_fast['sort'] = 'fast'
     # sleep(randint(60,80))
-    sleep(randint(5,10))
+    sleep(randint(5, 10))
 
     # saving a new dataframe as an excel file. the name is custom made to your cities and dates
     final_df = df_flights_cheap.append(df_flights_best).append(df_flights_fast)
-    final_df.to_excel('search_backups/{}_flights_{}-{}_from_{}_to_{}.xlsx'.format(strftime("%Y%m%d-%H%M"),
-                                                                                   city_from, city_to,
-                                                                                   date_start, date_end), index=False)
+    fileName = '{}_flights_{}-{}_from_{}_to_{}.xlsx'.format(strftime("%Y%m%d-%H%M"), city_from, city_to, date_start,date_end)
+    filePath = 'C:\\Users\\Leo Zhang\\Documents\\GitHub\\FlightScraper\\search_backups\\{}'.format(fileName)
+    final_df.to_excel(filePath, index=False)
+
+
+    # We can keep track of what they predict and how it actually turns out!
+    xp_loading = '//div[contains(@id,"advice")]'
+    loading = driver.find_element_by_xpath(xp_loading).text
+    xp_prediction = '//span[@class="info-text"]'
+    prediction = driver.find_element_by_xpath(xp_prediction).text
+    print(loading+'\n'+prediction)
+
+    # sometimes we get this string in the loading variable, which will conflict with the email we send later
+    # just change it to "Not Sure" if it happens
+    weird = '¯\\_(ツ)_/¯'
+    if loading == weird:
+        loading = 'Not sure'
+
+
+    send_email(filePath, fileName, Secrets.EmailCredentials(sender=Secrets.senderEmail,
+            password=Secrets.senderEmailPassword,
+            recipients=Secrets.receiverEmails),
+            subject='Kayak Flight Scraper Results',
+            msg=f'Cheapest Flight: {matrix_min}\nAverage Price: {matrix_avg}\nRecommendation: {loading}\n{prediction}\n\n---End of Message---',
+    )
     print('saved df.....')
     return final_df
+# endregion
 
-#     # We can keep track of what they predict and how it actually turns out!
-#     xp_loading = '//div[contains(@id,"advice")]'
-#     loading = driver.find_element_by_xpath(xp_loading).text
-#     xp_prediction = '//span[@class="info-text"]'
-#     prediction = driver.find_element_by_xpath(xp_prediction).text
-#     print(loading+'\n'+prediction)
+# region page_scrape
 
-#     # sometimes we get this string in the loading variable, which will conflict with the email we send later
-#     # just change it to "Not Sure" if it happens
-#     weird = '¯\\_(ツ)_/¯'
-#     if loading == weird:
-#         loading = 'Not sure'
-
-#     username = 'YOUREMAIL@hotmail.com'
-#     password = 'YOUR PASSWORD'
-
-#     server = smtplib.SMTP('smtp.outlook.com', 587)
-#     server.ehlo()
-#     server.starttls()
-#     server.login(username, password)
-#     msg = ('Subject: Flight Scraper\n\n\
-# Cheapest Flight: {}\nAverage Price: {}\n\nRecommendation: {}\n\nEnd of message'.format(matrix_min, matrix_avg, (loading+'\n'+prediction)))
-#     message = MIMEMultipart()
-#     message['From'] = 'YOUREMAIL@hotmail.com'
-#     message['to'] = 'YOUROTHEREMAIL@domain.com'
-#     server.sendmail('YOUREMAIL@hotmail.com', 'YOUROTHEREMAIL@domain.com', msg)
-#     print('sent email.....')
-#endregion
-
-#region page_scrape
 def page_scrape():
     """This function takes care of the scraping part"""
 
@@ -144,9 +135,9 @@ def page_scrape():
     sections = driver.find_elements_by_xpath(xp_sections)
     sections_list = [value.text for value in sections]
     # from a to b
-    section_a_list = sections_list[::2] # This is to separate the two flights
+    section_a_list = sections_list[::2]  # This is to separate the two flights
     # from b back to a
-    section_b_list = sections_list[1::2] # This is to separate the two flights
+    section_b_list = sections_list[1::2]  # This is to separate the two flights
 
     # if you run into a reCaptcha, you might want to do something about it
     # you will know there's a problem if the lists above are empty
@@ -184,25 +175,25 @@ def page_scrape():
     # getting the prices
     xp_prices = '//span[@class="price option-text"]'
     prices = driver.find_elements_by_xpath(xp_prices)
-    prices_list = [int(price.text.replace('$','')) for price in prices if price.text != '']
+    prices_list = [int(price.text.replace('$', ''))
+                   for price in prices if price.text != '']
     # prices_list = list(map(int, prices_list))
 
-#region won't apply for nonstop trips
+# region won't apply for nonstop trips
     # the stops are a big list with one leg on the even index and second leg on odd index
     # What is this snippet doing ?? ~Leo
     xp_stops = '//div[@class="section stops"]/div[1]'
     stops = driver.find_elements_by_xpath(xp_stops)
-    stops_list = [stop.text[0].replace('n','0') for stop in stops]
+    stops_list = [stop.text[0].replace('n', '0') for stop in stops]
     a_stop_list = stops_list[::2]
     b_stop_list = stops_list[1::2]
-
 
     xp_stops_cities = '//div[@class="section stops"]/div[2]'
     stops_cities = driver.find_elements_by_xpath(xp_stops_cities)
     stops_cities_list = [stop.text for stop in stops_cities]
     a_stop_name_list = stops_cities_list[::2]
     b_stop_name_list = stops_cities_list[1::2]
-#endregion
+# endregion
 
     # this part gets me the airline company and the departure and arrival times, for both legs
     xp_schedule = '//div[@class="section times"]'
@@ -218,35 +209,67 @@ def page_scrape():
     b_hours = hours_list[1::2]
     b_carrier = carrier_list[1::2]
 
-
     # cols = (['Out Day', 'Out Time', 'Out Weekday', 'Out Airline', 'Out Cities', 'Out Duration', 'Out Stops', 'Out Stop Cities',
     #         'Return Day', 'Return Time', 'Return Weekday', 'Return Airline', 'Return Cities', 'Return Duration', 'Return Stops', 'Return Stop Cities',
     #         'Price'])
 
     flights_df = pd.DataFrame.from_dict({'Out Day': a_day,
-                               'Out Weekday': a_weekday,
-                               'Out Duration': a_duration,
-                               'Out Cities': a_section_cities,
-                               'Return Day': b_day,
-                               'Return Weekday': b_weekday,
-                               'Return Duration': b_duration,
-                               'Return Cities': b_section_cities,
-                               'Out Stops': a_stop_list,
-                               'Out Stop Cities': a_stop_name_list,
-                               'Return Stops': b_stop_list,
-                               'Return Stop Cities': b_stop_name_list,
-                               'Out Time': a_hours,
-                               'Out Airline': a_carrier,
-                               'Return Time': b_hours,
-                               'Return Airline': b_carrier,
-                               'Price': prices_list},orient='index')
+                                         'Out Weekday': a_weekday,
+                                         'Out Duration': a_duration,
+                                         'Out Cities': a_section_cities,
+                                         'Return Day': b_day,
+                                         'Return Weekday': b_weekday,
+                                         'Return Duration': b_duration,
+                                         'Return Cities': b_section_cities,
+                                         'Out Stops': a_stop_list,
+                                         'Out Stop Cities': a_stop_name_list,
+                                         'Return Stops': b_stop_list,
+                                         'Return Stop Cities': b_stop_name_list,
+                                         'Out Time': a_hours,
+                                         'Out Airline': a_carrier,
+                                         'Return Time': b_hours,
+                                         'Return Airline': b_carrier,
+                                         'Price': prices_list}, orient='index')
     # rows become columns
     flights_df = flights_df.transpose()
 
-    flights_df['timestamp'] = strftime("%Y%m%d-%H%M") # so we can know when it was scraped
+    # so we can know when it was scraped
+    flights_df['timestamp'] = strftime("%Y%m%d-%H%M")
     return flights_df
 
-#endregion
+# endregion
+
+# region send_email(filePath:str, fileName:str, email:namedtuple, subject:str, msg:str)
+
+def send_email(filePath: str, fileName: str, email: namedtuple, subject:str, msg:str):
+    '''
+    sends an email out with the passed in message. Make sure the sender's email has "Less secure app access" turned on!!!
+    '''
+    # out-going email port
+    port = 465  # For SSL
+    smtp_server = "smtp.gmail.com"
+
+    context = ssl.create_default_context()
+    with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
+        try:
+            server.login(email.sender, email.password)
+            for recipient in email.recipients:
+                # must create a new EmailMessage object for every recipient
+                message = EmailMessage()
+                message['From'] = email.sender
+                message['To'] = recipient
+                message['Subject'] = subject
+                message.set_content(msg)
+                if filePath:
+                    message.add_attachment(
+                        open(filePath, 'r').read(), filename=fileName)
+                server.send_message(message)
+            print('email sent!')
+        except Exception as e:
+            print(e)
+            print("could not login or send the mail.")
+
+# endregion
 
 
 def main():
@@ -259,8 +282,11 @@ def main():
     city_to = 'DCA'
     date_start = '2022-01-19'
     date_end = '2022-01-29'
-    return start_kayak(city_from, city_to, date_start, date_end)
+    # Bonus: save a screenshot!
+    # driver.save_screenshot('pythonscraping.png')
+    driver.quit()
 
+    return start_kayak(city_from, city_to, date_start, date_end)
 
     # for n in range(0,5):
     #     start_kayak(city_from, city_to, date_start, date_end)
@@ -270,22 +296,9 @@ def main():
     #     sleep(60*60*4)
     #     print('sleep finished.....')
 
-    # Bonus: save a screenshot!
-    # driver.save_screenshot('pythonscraping.png')
-    # driver.quit()
 
 
 
 if __name__ == '__main__':
     df = main()
     print('works!')
-
-
-
-
-
-
-
-
-
-
