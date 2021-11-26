@@ -1,11 +1,9 @@
 from time import sleep, strftime
 from random import randint
-import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
-import smtplib
-from email.mime.multipart import MIMEMultipart
 from secrets import Secrets
+import pandas as pd
 
 
 driver = webdriver.Chrome(executable_path=Secrets.CHROME_DRIVER_PATH)
@@ -37,6 +35,7 @@ def start_kayak(city_from, city_to, date_start, date_end):
         '/' + date_start + '-flexible/' + date_end + '-flexible?sort=bestflight_a'
     print(kayakLink)
     driver.get(kayakLink)
+    driver.maximize_window()
     sleep(randint(8, 10))
     # sometimes a popup shows up, so we can use a try statement to check it and close
     try:
@@ -103,7 +102,7 @@ def start_kayak(city_from, city_to, date_start, date_end):
 
 
     # We can keep track of what they predict and how it actually turns out!
-    xp_loading = '//div[contains(@id,"advice")]'
+    xp_loading = '//div[contains(@class,"col-advice")]'
     loading = driver.find_element_by_xpath(xp_loading).text
     xp_prediction = '//span[@class="info-text"]'
     prediction = driver.find_element_by_xpath(xp_prediction).text
@@ -113,16 +112,18 @@ def start_kayak(city_from, city_to, date_start, date_end):
     # just change it to "Not Sure" if it happens
     weird = '¯\\_(ツ)_/¯'
     if loading == weird:
-        loading = 'Not sure'
+        loading = 'N\\A'
 
-
-    send_email(filePath, fileName, Secrets.EmailCredentials(sender=Secrets.senderEmail,
+    Secrets.sendEmail('', '', Secrets.EmailCredentials(sender=Secrets.senderEmail,
             password=Secrets.senderEmailPassword,
             recipients=Secrets.receiverEmails),
             subject='Kayak Flight Scraper Results',
             msg=f'Cheapest Flight: {matrix_min}\nAverage Price: {matrix_avg}\nRecommendation: {loading}\n{prediction}\n\n---End of Message---',
     )
     print('saved df.....')
+    # Bonus: save a screenshot!
+    driver.save_screenshot('./pythonscraping.png')
+    driver.quit()
     return final_df
 # endregion
 
@@ -167,10 +168,10 @@ def page_scrape():
     a_date_list = dates_list[::2]
     b_date_list = dates_list[1::2]
     # Separating the weekday from the day
-    a_day = [value.split()[0] for value in a_date_list]
-    a_weekday = [value.split()[1] for value in a_date_list]
-    b_day = [value.split()[0] for value in b_date_list]
-    b_weekday = [value.split()[1] for value in b_date_list]
+    a_day = [value.split()[0] for value in a_date_list if len(value.split()) > 0]
+    a_weekday = [value.split()[1] for value in a_date_list if len(value.split()) > 1]
+    b_day = [value.split()[0] for value in b_date_list if len(value.split()) > 0]
+    b_weekday = [value.split()[1] for value in b_date_list if len(value.split()) > 1]
 
     # getting the prices
     xp_prices = '//span[@class="price option-text"]'
@@ -239,37 +240,7 @@ def page_scrape():
 
 # endregion
 
-# region send_email(filePath:str, fileName:str, email:namedtuple, subject:str, msg:str)
 
-def send_email(filePath: str, fileName: str, email: namedtuple, subject:str, msg:str):
-    '''
-    sends an email out with the passed in message. Make sure the sender's email has "Less secure app access" turned on!!!
-    '''
-    # out-going email port
-    port = 465  # For SSL
-    smtp_server = "smtp.gmail.com"
-
-    context = ssl.create_default_context()
-    with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
-        try:
-            server.login(email.sender, email.password)
-            for recipient in email.recipients:
-                # must create a new EmailMessage object for every recipient
-                message = EmailMessage()
-                message['From'] = email.sender
-                message['To'] = recipient
-                message['Subject'] = subject
-                message.set_content(msg)
-                if filePath:
-                    message.add_attachment(
-                        open(filePath, 'r').read(), filename=fileName)
-                server.send_message(message)
-            print('email sent!')
-        except Exception as e:
-            print(e)
-            print("could not login or send the mail.")
-
-# endregion
 
 
 def main():
@@ -282,9 +253,6 @@ def main():
     city_to = 'DCA'
     date_start = '2022-01-19'
     date_end = '2022-01-29'
-    # Bonus: save a screenshot!
-    # driver.save_screenshot('pythonscraping.png')
-    driver.quit()
 
     return start_kayak(city_from, city_to, date_start, date_end)
 
@@ -300,5 +268,6 @@ def main():
 
 
 if __name__ == '__main__':
+    pass
     df = main()
-    print('works!')
+    print('Kayak plane ticket price scraping complete!')
