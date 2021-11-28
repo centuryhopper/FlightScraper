@@ -96,8 +96,9 @@ def start_kayak(city_from, city_to, date_start, date_end):
 
     # saving a new dataframe as an excel file. the name is custom made to your cities and dates
     final_df = df_flights_cheap.append(df_flights_best).append(df_flights_fast)
-    fileName = '{}_flights_{}-{}_from_{}_to_{}.xlsx'.format(strftime("%Y%m%d-%H%M"), city_from, city_to, date_start,date_end)
-    filePath = 'C:\\Users\\Leo Zhang\\Documents\\GitHub\\FlightScraper\\search_backups\\{}'.format(fileName)
+    currentTime = strftime("%Y%m%d-%H%M")
+    fileName = '{}_flights_{}-{}_from_{}_to_{}.xlsx'.format(currentTime, city_from, city_to, date_start,date_end)
+    filePath = 'C:\\Users\\Leo Zhang\\Documents\\GitHub\\FlightScraper\\FlightPrices\\{}'.format(fileName)
     final_df.to_excel(filePath, index=False)
 
 
@@ -118,11 +119,11 @@ def start_kayak(city_from, city_to, date_start, date_end):
             password=Secrets.senderEmailPassword,
             recipients=Secrets.receiverEmails),
             subject='Kayak Flight Scraper Results',
-            msg=f'Cheapest Flight: {matrix_min}\nAverage Price: {matrix_avg}\nRecommendation: {loading}\n{prediction}\n\n---End of Message---',
+            msg=f'Cheapest Flight: ${matrix_min}\nAverage Price: {round(matrix_avg,2)}\nRecommendation: {loading}\n{prediction}\n\n---End of Message---',
     )
     print('saved df.....')
     # Bonus: save a screenshot!
-    driver.save_screenshot('./pythonscraping.png')
+    driver.save_screenshot(f'./screenshots/pythonscraping_{currentTime}.png')
     driver.quit()
     return final_df
 # endregion
