@@ -1,6 +1,6 @@
 ## Thanks for using my script! It is fulfilling to know that I can make someone else's life easier with this automation script
 
-## Note that it is generally good practice to run this script in a virtual environment although you don't have to. There are many ## resources you can find online as to why it is better to do so.
+## Note that it is generally good practice to run this script in a virtual environment although you don't have to. There are many resources you can find online as to why it is better to do so
 
 Directions:
 __Make sure that you have a chrome driver installed and get its path. You can find them in this link: https://chromedriver.chromium.org/downloads__
