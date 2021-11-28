@@ -249,8 +249,8 @@ def main():
     # date_start = input('Search around which departure date? Please use YYYY-MM-DD format only ')
     # date_end = input('Return when? Please use YYYY-MM-DD format only ')
 
-    city_from = 'ORL'
-    city_to = 'DCA'
+    city_from = Secrets.cities['orlando']
+    city_to = Secrets.cities['dc']
     date_start = '2022-01-19'
     date_end = '2022-01-29'
 
