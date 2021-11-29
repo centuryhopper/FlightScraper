@@ -58,7 +58,7 @@ def start_kayak(city_from, city_to, date_start, date_end):
         '//*[contains(@id,"FlexMatrixCell")]')
     sleep(randint(5, 10))
     matrix_prices = [int(price.text.replace('$', ''))
-                     for price in matrix if price.text]
+                     for price in matrix if price.text if price.text.replace('$', '').isdigit()]
     matrix_min = min(matrix_prices)
     matrix_avg = sum(matrix_prices)/len(matrix_prices)
 
@@ -119,7 +119,7 @@ def start_kayak(city_from, city_to, date_start, date_end):
             password=Secrets.senderEmailPassword,
             recipients=Secrets.receiverEmails),
             subject='Kayak Flight Scraper Results',
-            msg=f'Cheapest Flight: ${matrix_min}\nAverage Price: {round(matrix_avg,2)}\nRecommendation: {loading}\n{prediction}\n\n---End of Message---',
+            msg=f'Cheapest Flight: ${matrix_min}\nAverage Price: ${round(matrix_avg,2)}\nRecommendation: {loading}\n{prediction}\n\n---End of Message---',
     )
     print('saved df.....')
     # Bonus: save a screenshot!
@@ -178,7 +178,7 @@ def page_scrape():
     xp_prices = '//span[@class="price option-text"]'
     prices = driver.find_elements_by_xpath(xp_prices)
     prices_list = [int(price.text.replace('$', ''))
-                   for price in prices if price.text != '']
+                   for price in prices if price.text != '' and price.text.replace('$', '').isdigit()]
     # prices_list = list(map(int, prices_list))
 
 # region won't apply for nonstop trips
