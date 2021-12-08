@@ -186,13 +186,13 @@ def page_scrape():
     # What is this snippet doing ?? ~Leo
     xp_stops = '//div[@class="section stops"]/div[1]'
     stops = driver.find_elements_by_xpath(xp_stops)
-    stops_list = [stop.text[0].replace('n', '0') for stop in stops]
+    stops_list = [stop.text[0].replace('n', '0') for stop in stops if stop]
     a_stop_list = stops_list[::2]
     b_stop_list = stops_list[1::2]
 
     xp_stops_cities = '//div[@class="section stops"]/div[2]'
     stops_cities = driver.find_elements_by_xpath(xp_stops_cities)
-    stops_cities_list = [stop.text for stop in stops_cities]
+    stops_cities_list = [stop.text for stop in stops_cities if stop]
     a_stop_name_list = stops_cities_list[::2]
     b_stop_name_list = stops_cities_list[1::2]
 # endregion
@@ -252,8 +252,8 @@ def main():
 
     city_from = Secrets.cities['orlando']
     city_to = Secrets.cities['dc']
-    date_start = '2022-01-19'
-    date_end = '2022-01-29'
+    date_start = '2022-03-06'
+    date_end = '2022-03-13'
 
     return start_kayak(city_from, city_to, date_start, date_end)
 
