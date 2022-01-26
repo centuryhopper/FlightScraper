@@ -3,6 +3,8 @@ from random import randint
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from secrets import Secrets
 import pandas as pd
@@ -188,7 +190,8 @@ def page_scrape():
     # getting the prices
     xp_prices = '//span[@class="price option-text"]'
     # prices = driver.find_elements_by_xpath(xp_prices)
-    prices = driver.find_elements(By.XPATH, xp_prices)
+    # prices = driver.find_elements(By.XPATH, xp_prices)
+    prices = WebDriverWait(driver, 5).until(EC.presence_of_all_elements_located((By.XPATH, xp_prices)))
 
     prices_list = [int(price.text.replace('$', ''))
                    for price in prices if price.text != '' and price.text.replace('$', '').isdigit()]
