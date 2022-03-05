@@ -10,11 +10,11 @@ from secrets import Secrets
 import pandas as pd
 
 
-driver = webdriver.Chrome(service=Service(Secrets.CHROME_DRIVER_PATH))
+driver = webdriver.Chrome(Secrets.CHROME_DRIVER_PATH)
 sleep(2)
 
 
-# region load_more
+
 
 def load_more():
     '''Load more results to maximize the scraping'''
@@ -27,10 +27,6 @@ def load_more():
         sleep(randint(10, 15))
     except:
         pass
-
-# endregion
-
-# region start_kayak
 
 def start_kayak(city_from, city_to, date_start, date_end):
     """City codes - it's the IATA codes!
@@ -61,7 +57,8 @@ def start_kayak(city_from, city_to, date_start, date_end):
 
     # Let's also get the lowest prices from the matrix on top
     # matrix = driver.find_elements_by_xpath('//*[contains(@id,"FlexMatrixCell")]')
-    matrix = driver.find_elements(By.XPATH,'//*[contains(@id,"FlexMatrixCell")]')
+    # matrix = driver.find_elements(By.XPATH,'//*[contains(@id,"FlexMatrixCell")]')
+    matrix = WebDriverWait(driver, 5).until(EC.presence_of_all_elements_located((By.XPATH, '//*[contains(@id,"FlexMatrixCell")]')))
     sleep(randint(5, 10))
     matrix_prices = [int(price.text.replace('$', ''))
                      for price in matrix if price.text if price.text.replace('$', '').isdigit()]
@@ -106,7 +103,7 @@ def start_kayak(city_from, city_to, date_start, date_end):
     final_df = df_flights_cheap.append(df_flights_best).append(df_flights_fast)
     currentTime = strftime("%Y%m%d-%H%M")
     fileName = '{}_flights_{}-{}_from_{}_to_{}.xlsx'.format(currentTime, city_from, city_to, date_start,date_end)
-    filePath = 'C:\\Users\\Leo Zhang\\Documents\\GitHub\\FlightScraper\\FlightPrices\\{}'.format(fileName)
+    filePath = 'C:\\Users\\Leo Zhang\\Documents\\GitHub\\FlightScraper\\_FlightPrices\\{}'.format(fileName)
     final_df.to_excel(filePath, index=False)
 
 
@@ -136,9 +133,6 @@ def start_kayak(city_from, city_to, date_start, date_end):
     driver.save_screenshot(f'./screenshots/pythonscraping_{currentTime}.png')
     driver.quit()
     return final_df
-# endregion
-
-# region page_scrape
 
 def page_scrape():
     """This function takes care of the scraping part"""
@@ -147,7 +141,7 @@ def page_scrape():
     # sections = driver.find_elements_by_xpath(xp_sections)
     sections = driver.find_elements(By.XPATH, xp_sections)
 
-    sections_list = [value.text for value in sections]
+    sections_list = [value.text if value else '' for value in sections]
     # from a to b
     section_a_list = sections_list[::2]  # This is to separate the two flights
     # from b back to a
@@ -197,42 +191,47 @@ def page_scrape():
                    for price in prices if price.text != '' and price.text.replace('$', '').isdigit()]
     # prices_list = list(map(int, prices_list))
 
-# region won't apply for nonstop trips
+
     # the stops are a big list with one leg on the even index and second leg on odd index
     # What is this snippet doing ?? ~Leo
     xp_stops = '//div[@class="section stops"]/div[1]'
     # stops = driver.find_elements_by_xpath(xp_stops)
-    stops = driver.find_elements(By.XPATH, xp_stops)
-    stops_list = [stop.text[0].replace('n', '0') for stop in stops if stop]
+    # stops = driver.find_elements(By.XPATH, xp_stops)
+    stops = WebDriverWait(driver, 5).until(EC.presence_of_all_elements_located((By.XPATH, xp_stops)))
+    try:
+        stops_list = [stop.text[0].replace('n', '0') if stop and stop.text else '' for stop in stops ]
+    except Exception as e:
+        for stop in stops:
+            print(stop.text)
+        raise e
     a_stop_list = stops_list[::2]
     b_stop_list = stops_list[1::2]
 
     xp_stops_cities = '//div[@class="section stops"]/div[2]'
     # stops_cities = driver.find_elements_by_xpath(xp_stops_cities)
-    stops_cities = driver.find_elements(By.XPATH, xp_stops_cities)
+    # stops_cities = driver.find_elements(By.XPATH, xp_stops_cities)
+    stops_cities = WebDriverWait(driver, 5).until(EC.presence_of_all_elements_located((By.XPATH, xp_stops_cities)))
     stops_cities_list = [stop.text for stop in stops_cities if stop]
     a_stop_name_list = stops_cities_list[::2]
     b_stop_name_list = stops_cities_list[1::2]
-# endregion
+
 
     # this part gets me the airline company and the departure and arrival times, for both legs
     xp_schedule = '//div[@class="section times"]'
     # schedules = driver.find_elements_by_xpath(xp_schedule)
-    schedules = driver.find_elements(By.XPATH, xp_schedule)
+    # schedules = driver.find_elements(By.XPATH, xp_schedule)
+    schedules = WebDriverWait(driver, 5).until(EC.presence_of_all_elements_located((By.XPATH, xp_schedule)))
     hours_list = []
     carrier_list = []
     for schedule in schedules:
-        hours_list.append(schedule.text.split('\n')[0])
-        carrier_list.append(schedule.text.split('\n')[1])
+        hours_list.append(schedule.text.split('\n')[0] if schedule and schedule.text else '')
+        carrier_list.append(schedule.text.split('\n')[1] if schedule and schedule.text else '')
+
     # split the hours and carriers, between a and b legs
     a_hours = hours_list[::2]
     a_carrier = carrier_list[::2]
     b_hours = hours_list[1::2]
     b_carrier = carrier_list[1::2]
-
-    # cols = (['Out Day', 'Out Time', 'Out Weekday', 'Out Airline', 'Out Cities', 'Out Duration', 'Out Stops', 'Out Stop Cities',
-    #         'Return Day', 'Return Time', 'Return Weekday', 'Return Airline', 'Return Cities', 'Return Duration', 'Return Stops', 'Return Stop Cities',
-    #         'Price'])
 
     flights_df = pd.DataFrame.from_dict({'Out Day': a_day,
                                          'Out Weekday': a_weekday,
@@ -258,11 +257,6 @@ def page_scrape():
     flights_df['timestamp'] = strftime("%Y%m%d-%H%M")
     return flights_df
 
-# endregion
-
-
-
-
 def main():
     # city_from = input('From which city? ')
     # city_to = input('Where to? ')
@@ -270,9 +264,9 @@ def main():
     # date_end = input('Return when? Please use YYYY-MM-DD format only ')
 
     city_from = Secrets.cities['orlando']
-    city_to = Secrets.cities['dc']
-    date_start = '2022-03-06'
-    date_end = '2022-03-13'
+    city_to = Secrets.cities['san_francisco']
+    date_start = '2022-07-10'
+    date_end = '2022-07-13'
 
     return start_kayak(city_from, city_to, date_start, date_end)
 
@@ -291,6 +285,5 @@ def main():
 
 
 if __name__ == '__main__':
-    pass
     df = main()
     print('Kayak plane ticket price scraping complete!')
