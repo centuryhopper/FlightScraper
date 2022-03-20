@@ -3,17 +3,21 @@ from random import randint
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
 from secrets import Secrets
 import pandas as pd
 
-
-driver = webdriver.Chrome(Secrets.CHROME_DRIVER_PATH)
+chrome_options = Options()
+chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+chrome_options.add_experimental_option('useAutomationExtension', False)
+chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+chrome_options.add_argument("--headless")
+driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 sleep(2)
-
-
 
 
 def load_more():
@@ -103,8 +107,8 @@ def start_kayak(city_from, city_to, date_start, date_end):
     final_df = df_flights_cheap.append(df_flights_best).append(df_flights_fast)
     currentTime = strftime("%Y%m%d-%H%M")
     fileName = '{}_flights_{}-{}_from_{}_to_{}.xlsx'.format(currentTime, city_from, city_to, date_start,date_end)
-    filePath = 'C:\\Users\\Leo Zhang\\Documents\\GitHub\\FlightScraper\\_FlightPrices\\{}'.format(fileName)
-    final_df.to_excel(filePath, index=False)
+    filePathComplete = 'C:\\Users\\Leo Zhang\\Documents\\GitHub\\FlightScraper\\_FlightPrices\\{}'.format(fileName)
+    final_df.to_excel(filePathComplete, index=False)
 
 
     # We can keep track of what they predict and how it actually turns out!
@@ -122,11 +126,12 @@ def start_kayak(city_from, city_to, date_start, date_end):
     if loading == weird:
         loading = 'N\\A'
 
-    Secrets.sendEmail(filePath, fileName, Secrets.EmailCredentials(sender=Secrets.senderEmail,
+    Secrets.sendEmail(filePathComplete, fileName, Secrets.EmailCredentials(sender=Secrets.senderEmail,
             password=Secrets.senderEmailPassword,
             recipients=Secrets.receiverEmails),
             subject='Kayak Flight Scraper Results',
             msg=f'Cheapest Flight: ${matrix_min}\nAverage Price: ${round(matrix_avg,2)}\nRecommendation: {loading}\n{prediction}\n\n---End of Message---',
+            subtype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
     print('saved df.....')
     # Bonus: save a screenshot!

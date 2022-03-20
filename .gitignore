@@ -3,3 +3,4 @@ __pycache__
 screenshots/
 virtenv/
 FlightPrices/
+.DS_Store
