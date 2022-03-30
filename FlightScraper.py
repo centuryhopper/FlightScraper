@@ -10,13 +10,14 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from secrets import Secrets
 import pandas as pd
+import os
 
 chrome_options = Options()
 chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
 chrome_options.add_experimental_option('useAutomationExtension', False)
 chrome_options.add_argument('--disable-blink-features=AutomationControlled')
 chrome_options.add_argument("--headless")
-driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()),)
 sleep(2)
 
 
@@ -32,7 +33,7 @@ def load_more():
     except:
         pass
 
-def start_kayak(city_from, city_to, date_start, date_end):
+def start_kayak(city_from, city_to, date_start, date_end, shouldDeleteFile=False):
     """City codes - it's the IATA codes!
     Date format -  YYYY-MM-DD"""
 
@@ -65,9 +66,9 @@ def start_kayak(city_from, city_to, date_start, date_end):
     matrix = WebDriverWait(driver, 5).until(EC.presence_of_all_elements_located((By.XPATH, '//*[contains(@id,"FlexMatrixCell")]')))
     sleep(randint(5, 10))
     matrix_prices = [int(price.text.replace('$', ''))
-                     for price in matrix if price.text if price.text.replace('$', '').isdigit()]
+                     for price in matrix if price and price.text if price.text.replace('$', '').isdigit()]
     matrix_min = min(matrix_prices)
-    matrix_avg = sum(matrix_prices)/len(matrix_prices)
+    matrix_avg = sum(matrix_prices) / len(matrix_prices)
 
     print('switching to cheapest results.....')
     sleep(randint(3, 5))
@@ -104,10 +105,10 @@ def start_kayak(city_from, city_to, date_start, date_end):
     sleep(randint(5, 10))
 
     # saving a new dataframe as an excel file. the name is custom made to your cities and dates
-    final_df = df_flights_cheap.append(df_flights_best).append(df_flights_fast)
+    final_df = pd.concat([df_flights_cheap, df_flights_best, df_flights_fast])
     currentTime = strftime("%Y%m%d-%H%M")
     fileName = '{}_flights_{}-{}_from_{}_to_{}.xlsx'.format(currentTime, city_from, city_to, date_start,date_end)
-    filePathComplete = 'C:\\Users\\Leo Zhang\\Documents\\GitHub\\FlightScraper\\_FlightPrices\\{}'.format(fileName)
+    filePathComplete = Secrets.FILE_PATH + fileName
     final_df.to_excel(filePathComplete, index=False)
 
 
@@ -133,10 +134,14 @@ def start_kayak(city_from, city_to, date_start, date_end):
             msg=f'Cheapest Flight: ${matrix_min}\nAverage Price: ${round(matrix_avg,2)}\nRecommendation: {loading}\n{prediction}\n\n---End of Message---',
             subtype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
+    if shouldDeleteFile and os.path.isfile(filePathComplete):
+        os.remove(filePathComplete)
+
     print('saved df.....')
     # Bonus: save a screenshot!
     driver.save_screenshot(f'./screenshots/pythonscraping_{currentTime}.png')
     driver.quit()
+
     return final_df
 
 def page_scrape():
@@ -190,7 +195,7 @@ def page_scrape():
     xp_prices = '//span[@class="price option-text"]'
     # prices = driver.find_elements_by_xpath(xp_prices)
     # prices = driver.find_elements(By.XPATH, xp_prices)
-    prices = WebDriverWait(driver, 5).until(EC.presence_of_all_elements_located((By.XPATH, xp_prices)))
+    prices = WebDriverWait(driver, 2).until(EC.presence_of_all_elements_located((By.XPATH, xp_prices)))
 
     prices_list = [int(price.text.replace('$', ''))
                    for price in prices if price.text != '' and price.text.replace('$', '').isdigit()]
@@ -263,17 +268,30 @@ def page_scrape():
     return flights_df
 
 def main():
+    lastDate = ''
+    if not os.path.isfile(f'{Secrets.TIMESTAMP_FILEPATH}time_stamp.txt'):
+        print('creating file')
+        with open(f'{Secrets.TIMESTAMP_FILEPATH}time_stamp.txt', 'w') as f:
+            f.write('')
+    with open(f'{Secrets.TIMESTAMP_FILEPATH}time_stamp.txt', 'r') as f:
+        lastDate = f.read()
+        if lastDate == strftime("%Y-%m-%d"):
+            print('already ran this')
+            driver.quit()
+            return
+    with open(f'{Secrets.TIMESTAMP_FILEPATH}time_stamp.txt', 'w') as f:
+        f.write(strftime("%Y-%m-%d"))
     # city_from = input('From which city? ')
     # city_to = input('Where to? ')
     # date_start = input('Search around which departure date? Please use YYYY-MM-DD format only ')
     # date_end = input('Return when? Please use YYYY-MM-DD format only ')
 
     city_from = Secrets.cities['orlando']
-    city_to = Secrets.cities['san_francisco']
-    date_start = '2022-07-10'
-    date_end = '2022-07-13'
+    city_to = Secrets.cities['los_angeles']
+    date_start = '2022-08-19'
+    date_end = '2022-08-22'
 
-    return start_kayak(city_from, city_to, date_start, date_end)
+    return start_kayak(city_from, city_to, date_start, date_end, shouldDeleteFile=True)
 
 #region old code
     # for n in range(0,5):
