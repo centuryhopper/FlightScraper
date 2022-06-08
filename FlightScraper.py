@@ -10,15 +10,27 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from secrets import Secrets
 import pandas as pd
-import os
+import os, sys, re
 
 chrome_options = Options()
-chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
-chrome_options.add_experimental_option('useAutomationExtension', False)
-chrome_options.add_argument('--disable-blink-features=AutomationControlled')
-chrome_options.add_argument("--headless")
-driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()),)
-sleep(2)
+# chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+# chrome_options.add_experimental_option('useAutomationExtension', False)
+# chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+# chrome_options.add_argument("--headless")
+driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+lastDate = ''
+if not os.path.isfile(f'{Secrets.TIMESTAMP_FILEPATH}time_stamp.txt'):
+    print('creating file')
+    with open(f'{Secrets.TIMESTAMP_FILEPATH}time_stamp.txt', 'w') as f:
+        f.write('')
+with open(f'{Secrets.TIMESTAMP_FILEPATH}time_stamp.txt', 'r') as f:
+    lastDate = f.read()
+    if lastDate == strftime("%Y-%m-%d"):
+        print('already ran this')
+        driver.quit()
+        sys.exit()
+with open(f'{Secrets.TIMESTAMP_FILEPATH}time_stamp.txt', 'w') as f:
+    f.write(strftime("%Y-%m-%d"))
 
 
 def load_more():
@@ -39,10 +51,12 @@ def start_kayak(city_from, city_to, date_start, date_end, shouldDeleteFile=False
 
     kayakLink = 'https://www.kayak.com/flights/' + city_from + '-' + city_to + \
         '/' + date_start + '-flexible/' + date_end + '-flexible?sort=bestflight_a'
-    print(kayakLink)
+
+    # print(kayakLink)
     driver.get(kayakLink)
     driver.maximize_window()
-    sleep(randint(8, 10))
+    driver.implicitly_wait(randint(8, 10))
+
     # sometimes a popup shows up, so we can use a try statement to check it and close
     try:
         xp_popup_close = '//button[contains(@id,"dialog-close") and contains(@class,"Button-No-Standard-Style close ")]'
@@ -50,11 +64,11 @@ def start_kayak(city_from, city_to, date_start, date_end, shouldDeleteFile=False
         driver.find_elements(By.XPATH, xp_popup_close)[5].click()
     except Exception as e:
         pass
-    # sleep(randint(60,95))
     sleep(randint(5, 10))
-    print('loading more.....')
+    # print('loading more.....')
     load_more()
-    print('starting first scrape.....')
+    # print('starting first scrape.....')
+    # return
     df_flights_best = page_scrape()
     df_flights_best['sort'] = 'best'
     # sleep(randint(60,80))
@@ -70,35 +84,37 @@ def start_kayak(city_from, city_to, date_start, date_end, shouldDeleteFile=False
     matrix_min = min(matrix_prices)
     matrix_avg = sum(matrix_prices) / len(matrix_prices)
 
-    print('switching to cheapest results.....')
+    # print('switching to cheapest results.....')
     sleep(randint(3, 5))
     cheap_results = '//a[@data-code = "price"]'
     # cheap_results_button = driver.find_element_by_xpath(cheap_results)
     cheap_results_button = driver.find_element(By.XPATH, cheap_results)
     driver.execute_script("arguments[0].click();", cheap_results_button)
     # driver.find_element_by_xpath(cheap_results).click()
+
+
     sleep(randint(60, 90))
-    print('loading more.....')
+    # print('loading more.....')
 
     load_more()
 
-    print('starting second scrape.....')
+    # print('starting second scrape.....')
     df_flights_cheap = page_scrape()
     df_flights_cheap['sort'] = 'cheap'
     # sleep(randint(60,80))
     sleep(randint(5, 10))
 
-    print('switching to quickest results.....')
+    # print('switching to quickest results.....')
     quick_results = '//a[@data-code = "duration"]'
     # quick_results_button = driver.find_element_by_xpath(quick_results)
     quick_results_button = driver.find_element(By.XPATH, quick_results)
     driver.execute_script("arguments[0].click();", quick_results_button)
     sleep(randint(60, 90))
-    print('loading more.....')
+    # print('loading more.....')
 
     load_more()
 
-    print('starting third scrape.....')
+    # print('starting third scrape.....')
     df_flights_fast = page_scrape()
     df_flights_fast['sort'] = 'fast'
     # sleep(randint(60,80))
@@ -119,13 +135,13 @@ def start_kayak(city_from, city_to, date_start, date_end, shouldDeleteFile=False
     xp_prediction = '//span[@class="info-text"]'
     # prediction = driver.find_element_by_xpath(xp_prediction).text
     prediction = driver.find_element(By.XPATH, xp_prediction).text
-    print(loading+'\n'+prediction)
+    # print(loading+'\n'+prediction)
 
     # sometimes we get this string in the loading variable, which will conflict with the email we send later
     # just change it to "Not Sure" if it happens
     weird = '¯\\_(ツ)_/¯'
     if loading == weird:
-        loading = 'N\\A'
+        loading = 'N/A'
 
     Secrets.sendEmail(filePathComplete, fileName, Secrets.EmailCredentials(sender=Secrets.senderEmail,
             password=Secrets.senderEmailPassword,
@@ -137,9 +153,9 @@ def start_kayak(city_from, city_to, date_start, date_end, shouldDeleteFile=False
     if shouldDeleteFile and os.path.isfile(filePathComplete):
         os.remove(filePathComplete)
 
-    print('saved df.....')
+    # print('saved df.....')
     # Bonus: save a screenshot!
-    driver.save_screenshot(f'./screenshots/pythonscraping_{currentTime}.png')
+    driver.save_screenshot(f'{Secrets.TIMESTAMP_FILEPATH}screenshots/pythonscraping_{currentTime}.png')
     driver.quit()
 
     return final_df
@@ -166,18 +182,34 @@ def page_scrape():
         sleep(60)
 
     # I'll use the letter A for the outbound flight and B for the inbound
-    a_duration = []
-    a_section_cities = []
+    out_duration = []
+    out_section_cities = []
     for n in section_a_list:
         # Separate the time from the cities
-        a_section_cities.append(''.join(n.split()[2:5]))
-        a_duration.append(''.join(n.split()[0:2]))
-    b_duration = []
-    b_section_cities = []
+        out_section_cities.append(''.join(n.split()[2:5]))
+        out_duration.append(''.join(n.split()[0:2]))
+
+    print(f'before {out_duration = }')
+
+    # filter out all times that are more than 9 hours
+    out_duration = list(filter(lambda duration: int(''.join(re.findall('\d', duration))) <= 900, out_duration))
+
+    print(f'after {out_duration = }')
+
+    return_duration = []
+    return_section_cities = []
     for n in section_b_list:
         # Separate the time from the cities
-        b_section_cities.append(''.join(n.split()[2:5]))
-        b_duration.append(''.join(n.split()[0:2]))
+        return_section_cities.append(''.join(n.split()[2:5]))
+        return_duration.append(''.join(n.split()[0:2]))
+
+    print(f'before {return_duration = }')
+
+    return_duration = list(filter(lambda duration: int(''.join(re.findall('\d', duration))) <= 900, return_duration))
+
+    print(f'after {return_duration = }')
+
+
 
     xp_dates = '//div[@class="section date"]'
     # dates = driver.find_elements_by_xpath(xp_dates)
@@ -190,12 +222,13 @@ def page_scrape():
     a_weekday = [value.split()[1] for value in a_date_list if len(value.split()) > 1]
     b_day = [value.split()[0] for value in b_date_list if len(value.split()) > 0]
     b_weekday = [value.split()[1] for value in b_date_list if len(value.split()) > 1]
+    # return None
 
     # getting the prices
     xp_prices = '//span[@class="price option-text"]'
     # prices = driver.find_elements_by_xpath(xp_prices)
     # prices = driver.find_elements(By.XPATH, xp_prices)
-    prices = WebDriverWait(driver, 2).until(EC.presence_of_all_elements_located((By.XPATH, xp_prices)))
+    prices = WebDriverWait(driver, 5).until(EC.presence_of_all_elements_located((By.XPATH, xp_prices)))
 
     prices_list = [int(price.text.replace('$', ''))
                    for price in prices if price.text != '' and price.text.replace('$', '').isdigit()]
@@ -245,12 +278,12 @@ def page_scrape():
 
     flights_df = pd.DataFrame.from_dict({'Out Day': a_day,
                                          'Out Weekday': a_weekday,
-                                         'Out Duration': a_duration,
-                                         'Out Cities': a_section_cities,
+                                         'Out Duration': out_duration,
+                                         'Out Cities': out_section_cities,
                                          'Return Day': b_day,
                                          'Return Weekday': b_weekday,
-                                         'Return Duration': b_duration,
-                                         'Return Cities': b_section_cities,
+                                         'Return Duration': return_duration,
+                                         'Return Cities': return_section_cities,
                                          'Out Stops': a_stop_list,
                                          'Out Stop Cities': a_stop_name_list,
                                          'Return Stops': b_stop_list,
@@ -268,30 +301,17 @@ def page_scrape():
     return flights_df
 
 def main():
-    lastDate = ''
-    if not os.path.isfile(f'{Secrets.TIMESTAMP_FILEPATH}time_stamp.txt'):
-        print('creating file')
-        with open(f'{Secrets.TIMESTAMP_FILEPATH}time_stamp.txt', 'w') as f:
-            f.write('')
-    with open(f'{Secrets.TIMESTAMP_FILEPATH}time_stamp.txt', 'r') as f:
-        lastDate = f.read()
-        if lastDate == strftime("%Y-%m-%d"):
-            print('already ran this')
-            driver.quit()
-            return
-    with open(f'{Secrets.TIMESTAMP_FILEPATH}time_stamp.txt', 'w') as f:
-        f.write(strftime("%Y-%m-%d"))
     # city_from = input('From which city? ')
     # city_to = input('Where to? ')
     # date_start = input('Search around which departure date? Please use YYYY-MM-DD format only ')
     # date_end = input('Return when? Please use YYYY-MM-DD format only ')
 
-    city_from = Secrets.cities['orlando']
-    city_to = Secrets.cities['los_angeles']
-    date_start = '2022-08-19'
-    date_end = '2022-08-22'
+    city_from = Secrets.travelMap['source']
+    city_to = Secrets.travelMap['destination']
+    date_start = '2022-07-05'
+    date_end = '2022-07-10'
 
-    return start_kayak(city_from, city_to, date_start, date_end, shouldDeleteFile=True)
+    return start_kayak(city_from, city_to, date_start, date_end, shouldDeleteFile=False)
 
 #region old code
     # for n in range(0,5):
@@ -309,4 +329,4 @@ def main():
 
 if __name__ == '__main__':
     df = main()
-    print('Kayak plane ticket price scraping complete!')
+    # print('Kayak plane ticket price scraping complete!')
