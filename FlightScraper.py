@@ -124,6 +124,8 @@ def start_kayak(city_from, city_to, date_start, date_end, shouldDeleteFile=False
     final_df = pd.concat([df_flights_cheap, df_flights_best, df_flights_fast])
     currentTime = strftime("%Y%m%d-%H%M")
     fileName = '{}_flights_{}-{}_from_{}_to_{}.xlsx'.format(currentTime, city_from, city_to, date_start,date_end)
+    if not os.path.exists(Secrets.FILE_PATH):
+        os.mkdir(Secrets.FILE_PATH)
     filePathComplete = Secrets.FILE_PATH + fileName
     final_df.to_excel(filePathComplete, index=False)
 
