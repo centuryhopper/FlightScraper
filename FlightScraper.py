@@ -12,6 +12,8 @@ from secrets import Secrets
 import pandas as pd
 import os, sys, re
 
+os.chdir(os.path.dirname(__file__))
+
 chrome_options = Options()
 # chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
 # chrome_options.add_experimental_option('useAutomationExtension', False)
@@ -19,17 +21,17 @@ chrome_options = Options()
 # chrome_options.add_argument("--headless")
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
 lastDate = ''
-if not os.path.isfile(f'{Secrets.TIMESTAMP_FILEPATH}time_stamp.txt'):
+if not os.path.isfile(f'{os.getcwd()}/time_stamp.txt'):
     print('creating file')
-    with open(f'{Secrets.TIMESTAMP_FILEPATH}time_stamp.txt', 'w') as f:
+    with open(f'{os.getcwd()}/time_stamp.txt', 'w') as f:
         f.write('')
-with open(f'{Secrets.TIMESTAMP_FILEPATH}time_stamp.txt', 'r') as f:
+with open(f'{os.getcwd()}/time_stamp.txt', 'r') as f:
     lastDate = f.read()
     if lastDate == strftime("%Y-%m-%d"):
         print('already ran this')
         driver.quit()
         sys.exit()
-with open(f'{Secrets.TIMESTAMP_FILEPATH}time_stamp.txt', 'w') as f:
+with open(f'{os.getcwd()}/time_stamp.txt', 'w') as f:
     f.write(strftime("%Y-%m-%d"))
 
 
@@ -124,9 +126,9 @@ def start_kayak(city_from, city_to, date_start, date_end, shouldDeleteFile=False
     final_df = pd.concat([df_flights_cheap, df_flights_best, df_flights_fast])
     currentTime = strftime("%Y%m%d-%H%M")
     fileName = '{}_flights_{}-{}_from_{}_to_{}.xlsx'.format(currentTime, city_from, city_to, date_start,date_end)
-    if not os.path.exists(Secrets.FILE_PATH):
-        os.mkdir(Secrets.FILE_PATH)
-    filePathComplete = Secrets.FILE_PATH + fileName
+    if not os.path.exists(os.getcwd() + '/_FlightPrices/'):
+        os.mkdir(os.getcwd() + '/_FlightPrices/')
+    filePathComplete = os.getcwd() + '/_FlightPrices/' + fileName
     final_df.to_excel(filePathComplete, index=False)
 
 
@@ -145,19 +147,22 @@ def start_kayak(city_from, city_to, date_start, date_end, shouldDeleteFile=False
     if loading == weird:
         loading = 'N/A'
 
-    Secrets.sendEmail(filePathComplete, fileName, Secrets.EmailCredentials(sender=Secrets.senderEmail,
-            password=Secrets.senderEmailPassword,
-            recipients=Secrets.receiverEmails),
-            subject='Kayak Flight Scraper Results',
-            msg=f'Cheapest Flight: ${matrix_min}\nAverage Price: ${round(matrix_avg,2)}\nRecommendation: {loading}\n{prediction}\n\n---End of Message---',
-            subtype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
+    # Secrets.sendEmail(filePathComplete, fileName, Secrets.EmailCredentials(sender=Secrets.senderEmail,
+    #         password=Secrets.senderEmailPassword,
+    #         recipients=Secrets.receiverEmails),
+    #         subject='Kayak Flight Scraper Results',
+    #         msg=f'Cheapest Flight: ${matrix_min}\nAverage Price: ${round(matrix_avg,2)}\nRecommendation: {loading}\n{prediction}\n\n---End of Message---',
+    #         subtype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    # )
+
     if shouldDeleteFile and os.path.isfile(filePathComplete):
         os.remove(filePathComplete)
 
     # print('saved df.....')
     # Bonus: save a screenshot!
-    driver.save_screenshot(f'{Secrets.TIMESTAMP_FILEPATH}screenshots/pythonscraping_{currentTime}.png')
+    if not os.path.exists(os.getcwd() + '/screenshots/'):
+        os.mkdir(os.getcwd() + '/screenshots/')
+    driver.save_screenshot(f'{os.getcwd()}/screenshots/pythonscraping_{currentTime}.png')
     driver.quit()
 
     return final_df
