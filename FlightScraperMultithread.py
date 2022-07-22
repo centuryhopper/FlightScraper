@@ -70,9 +70,6 @@ def threadWork(anchorTagDataCode, flightCategory):
     chrome_options.add_experimental_option('useAutomationExtension', False)
     chrome_options.add_argument('--disable-blink-features=AutomationControlled')
 
-    # chrome_options.add_argument("user-data-dir=/home/leo_zhang/.config/google-chrome/Default") #Path to your chrome profile
-    # chrome_options.add_argument(r'--profile-directory=Default')
-
     # chrome_options.add_argument(f'user-agent={UserAgent().chrome}')
     # chrome_options.add_argument('--proxy-server=%s' % PROXY)
     # chrome_options.add_argument(f"--window-size={randint(480,1920)},{randint(480,1080)}")
