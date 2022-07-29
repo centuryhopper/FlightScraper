@@ -2,5 +2,4 @@ secrets.py
 __pycache__
 screenshots/
 virtenv/
-_FlightPrices/
 .DS_Store
