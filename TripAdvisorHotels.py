@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-import time
-import requests
-from time import sleep
-from bs4 import BeautifulSoup as soup
-import pandas as pd
-import re
 import os
+import re
+import time
+from time import sleep
+
+import pandas as pd
+import requests
+from bs4 import BeautifulSoup as soup
 
 os.chdir(os.path.dirname(__file__))
 

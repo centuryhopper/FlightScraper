@@ -1,5 +1,5 @@
-secrets.py
 __pycache__
 screenshots/
 virtenv/
 .DS_Store
+.env

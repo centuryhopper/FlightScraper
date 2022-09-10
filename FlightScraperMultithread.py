@@ -2,8 +2,6 @@ import os
 import re
 import sys
 from random import randint
-from secrets import Secrets
-# from threading import Thread
 import concurrent.futures
 from time import sleep, strftime
 
@@ -57,8 +55,8 @@ def load_more(webDriver):
         pass
 
 def threadWork(anchorTagDataCode, flightCategory):
-    city_from = Secrets.travelMap['source']
-    city_to = Secrets.travelMap['destination']
+    city_from = os.getenv('startCity')
+    city_to = os.getenv('destinationCity')
     date_start = '2022-07-05'
     date_end = '2022-08-24'
     kayakLink = 'https://www.kayak.com/flights/' + city_from + '-' + city_to + \
@@ -262,8 +260,8 @@ def main():
     # city_to = input('Where to? ')
     # date_start = input('Search around which departure date? Please use YYYY-MM-DD format only ')
     # date_end = input('Return when? Please use YYYY-MM-DD format only ')
-    city_from = Secrets.travelMap['source']
-    city_to = Secrets.travelMap['destination']
+    city_from = os.getenv('startCity')
+    city_to = os.getenv('destinationCity')
     date_start = '2022-07-05'
     date_end = '2022-07-10'
 
